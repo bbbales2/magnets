@@ -12,8 +12,6 @@ df = pandas.read_pickle("Gd_alldata.p")
 #%%
 
 def split_MTs(df, col="Magnetic Field (T)", precision=3):
-   '''Splits a df containing M(T) runs at different fields, return a pandas
-   groupby object, with the df grouped into isofield data (individual M(T)'s)'''
    return df.groupby(lambda x: numpy.around(df[col][x], precision))
 
 M = {}
