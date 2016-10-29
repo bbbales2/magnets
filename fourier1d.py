@@ -10,7 +10,12 @@ x = numpy.linspace(0, 1, M)
 
 data = numpy.zeros((M))
 for i in range(M):
-    data[i] = numpy.sin(2 * numpy.pi * 2 * x[i] + 0.5) + numpy.random.randn() / 5
+    if i > M / 2:
+        data[i] = 0
+    else:
+        data[i] = x[i]# + numpy.random.randn() / 5
+
+data -= numpy.mean(data)
 
 plt.plot(data, '*')
 plt.show()
