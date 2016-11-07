@@ -20,6 +20,21 @@ dt = ts[1] - ts[0]
 
 #%%
 
+dmds1 = numpy.zeros((N, N, N + 1, N))
+
+for i in range(N):
+    for j in range(N):
+        if j >= 1:
+            dmds1[i, j] = dmds1[i, j - 1]
+
+            for ih in [i, i + 1]:
+                jh = j
+
+                if ih == i:
+                    dmds1[i, j, ih, jh] = -dt / dh
+                if ih == i + 1:
+                    dmds1[i, j, ih, jh] = dt / dh
+
 dmds = numpy.zeros((N, N, N + 1, N))
 
 for i in range(N):
@@ -31,19 +46,20 @@ for i in range(N):
                 if ih == i + 1:
                     dmds[i, j, ih, jh] = dt / dh
 
+numpy.count_nonzero(dmds - dmds1)
 #%%
 
 def getm(s, m0):
     m = numpy.zeros((N, N))
 
     for i in range(N):
-        m[i] = 0#m0[i]
+        m[i] = m0[i]
         for j in range(N):
-            for jh in range(1, j + 1):
+            for jh in range(0, j + 1):
                 m[i, j] += (s[i + 1, jh] - s[i, jh]) * dt / dh
 
     return m
-#%%
+
 alpha = 0.0001
 
 def loss(m, m0, s):
@@ -100,7 +116,7 @@ approx1 = numpy.zeros(N)
 
 exact = dlossds(getm(s, m0), s)
 exact1 = dlossdm0(getm(s, m0), m0)
-#%%
+
 for i in range(N + 1):
     for j in range(N):
         sh = s.copy()
@@ -152,8 +168,10 @@ while 1:
     dlds /= norm
     dldm /= norm
 
-    s -= dlds * 1.0e-1
-    m0 -= dldm * 1.0e-1
+    s -= dlds * 1.0e0
+    m0 -= dldm * 1.0e0
+
+    s[N] = 0
 
     print l
 
@@ -162,7 +180,7 @@ while 1:
 import pickle
 
 f = open('/home/bbales2/magnets/mhi')
-mh = pickle.load(f)
+mh = numpy.flipud(pickle.load(f))
 f.close()
 
 #%%
