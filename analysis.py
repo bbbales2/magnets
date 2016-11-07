@@ -16,7 +16,7 @@ def split_MTs(df, col="Magnetic Field (T)", precision=3):
 
 M = {}
 
-temps = numpy.linspace(235, 370, 100)
+temps = numpy.linspace(225, 375, 100)
 Mhs = []
 Ts = []
 
@@ -67,18 +67,63 @@ plt.show()
 
 interp = scipy.interpolate.interp2d(temps, Ts, Mhs)
 
-Ts2 = numpy.linspace(min(Ts), max(Ts), 50)
-temps2 = numpy.linspace(min(temps), max(temps), 50)
-
-xs = numpy.linspace(0, 1.0, 50, endpoint = False)
-ys = numpy.linspace(0, 1.0, 50, endpoint = False)
+Ts2 = numpy.linspace(min(Ts), max(Ts), 500)
+temps2 = numpy.linspace(min(temps), max(temps), 500)
 
 Mhis = interp(temps2, Ts2)
 
 plt.imshow(Mhis, interpolation = 'NONE')
 plt.show()
 
-Mhis = numpy.flipud(Mhis)
+tmp = numpy.concatenate([numpy.fliplr(Mhis), Mhis], axis = 1)
+tmp = numpy.concatenate([tmp, numpy.flipud(tmp)], axis = 0)
+plt.imshow(tmp)
+plt.show()
+
+Mhis = tmp
+#%%
+Mhh = numpy.fft.fft2(Mhis)
+ys = numpy.fft.fftfreq(Mhis.shape[0], d = Ts2[1] - Ts2[0])
+xs = numpy.fft.fftfreq(Mhis.shape[1], d = temps2[1] - temps2[0])
+
+Ys, Xs = numpy.meshgrid(ys, xs, indexing = 'ij')
+
+a = 1 / 1.0
+b = 1 / 1.0
+
+Mhsm = numpy.exp(-numpy.pi * ((Xs ** 2) / (a ** 2) + (Ys ** 2) / (b ** 2))) * Mhh
+
+Mhsm = numpy.real(numpy.fft.ifft2(2 * numpy.pi * 1j * Xs * Mhsm))
+
+plt.imshow(Mhis)
+plt.colorbar()
+f = plt.gcf()
+f.set_size_inches((16, 10))
+plt.show()
+
+plt.imshow(Mhsm)
+plt.colorbar()
+f = plt.gcf()
+f.set_size_inches((16, 10))
+plt.show()
+
+dS = numpy.zeros((500, 500))
+
+for i in range(1, 500):
+    dS[i] = dS[i - 1] + (Ts2[i] - Ts2[i - 1]) * Mhsm[i - 1, ::-1][500:0:-1]#[0:500]
+
+advanced = numpy.flipud(dS)
+
+plt.imshow(dS)
+plt.colorbar()
+f = plt.gcf()
+f.set_size_inches((16, 10))
+plt.show()
+#%%
+
+2 * numpy.pi * 1j * Ys * Mhh
+
+#%%
 #%%
 
 Mhis = numpy.zeros((50, 50))
@@ -94,10 +139,10 @@ plt.show()
 J = 8
 K = 8
 
-V = numpy.zeros((50, 50, J * K * 2))
+V = numpy.zeros((100, 100, J * K * 2))
 
-for l in range(50):
-    for m in range(50):
+for l in range(100):
+    for m in range(100):
         for j in range(0, J):
             for k in range(0, K):
                 #V[l, m, j - 1, k - 1, 0] = (float(k) / j) * numpy.real(numpy.exp(2 * 1j * numpy.pi * (k * ys[l] + j * xs[m])))#
@@ -114,9 +159,10 @@ for l in range(50):
 #Q = numpy.einsum('abcde, abfgh', V, V).reshape((-1, 32))
 #W = numpy.einsum('abcde, ab', V, Mhis).reshape((32))
 Q = numpy.einsum('abc, abd', V, V)
-W = numpy.einsum('abc, ab', V, Mhis)
+#W = numpy.einsum('abc, ab', V, Mhis) / numpy.diag(Q)
 Q[64, 64] = 1
-a = numpy.linalg.solve(Q, W)
+#a = numpy.linalg.solve(Q, W)
+a = numpy.einsum('abc, ab', V, Mhis) / numpy.diag(Q)
 
 Mha = numpy.real(numpy.einsum('jkm, m', V, a))
 
@@ -130,7 +176,7 @@ xs = []
 ys = []
 zs = []
 
-temps = numpy.linspace(235, 370, 100)
+temps = numpy.linspace(235, 370, 500)
 
 dmdts = []
 Hs = []
@@ -177,7 +223,7 @@ import scipy.interpolate
 interp = scipy.interpolate.interp2d(temps, Hs, dS)
 #%%
 
-Htmp = numpy.linspace(min(Hs), max(Hs), 100)
+Htmp = numpy.linspace(min(Hs), max(Hs), 500)
 
 plt.imshow(interp(temps, Htmp)[::-1], interpolation = 'NONE', extent = [min(temps), max(temps), min(Hs), max(Hs)], aspect = 20.0)
 plt.xlabel('Temperature')
@@ -185,7 +231,31 @@ plt.ylabel('Magnetic field')
 plt.title('$\Delta S_M$')
 plt.colorbar()
 plt.show()
+#%%
 
+plt.imshow(basic, interpolation = 'NONE', extent = [min(temps), max(temps), min(Hs), max(Hs)], aspect = 20.0)
+plt.xlabel('Temperature')
+plt.ylabel('Magnetic field')
+plt.title('$\Delta S_M$')
+plt.colorbar()
+plt.show()
+
+
+plt.imshow(advanced, interpolation = 'NONE', extent = [min(temps), max(temps), min(Hs), max(Hs)], aspect = 20.0)
+plt.xlabel('Temperature')
+plt.ylabel('Magnetic field')
+plt.title('$\Delta S_M$')
+plt.colorbar()
+plt.show()
+
+plt.imshow(basic - advanced, interpolation = 'NONE', extent = [min(temps), max(temps), min(Hs), max(Hs)], aspect = 20.0)
+plt.xlabel('Temperature')
+plt.ylabel('Magnetic field')
+plt.title('$\Delta S_M$')
+plt.colorbar()
+plt.show()
+#%%
+basic = interp(temps, Htmp)[::-1]
 #%%
 dmdt = scipy.interpolate.interp2d(xs, ys, zs)
 

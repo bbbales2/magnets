@@ -10,10 +10,11 @@ x = numpy.linspace(0, 1, M)
 
 data = numpy.zeros((M))
 for i in range(M):
-    if i > M / 2:
-        data[i] = 0
-    else:
-        data[i] = x[i]# + numpy.random.randn() / 5
+    #if i > M / 2:
+    #    data[i] = 0
+    #else:
+    #    data[i] = x[i]# + numpy.random.randn() / 5
+    data[i] = numpy.sin(2 * numpy.pi * 2 * x[i]) + numpy.random.randn() / 5
 
 data -= numpy.mean(data)
 
@@ -43,3 +44,22 @@ plt.show()
 print Vh.T.dot(data)
 print numpy.real(V).T.dot(data)
 print numpy.imag(V).T.dot(data)
+#%%
+coeffs = numpy.fft.fft(data)
+freqs = numpy.fft.fftfreq(len(coeffs))
+
+plt.plot(numpy.fft.ifft(coeffs))
+plt.plot(data, '*')
+plt.show()
+
+plt.plot(numpy.real(numpy.fft.ifft(2 * numpy.pi * freqs * 1j * coeffs)))
+plt.show()
+
+coeffs[4:-3] = 0
+
+plt.plot(numpy.fft.ifft(coeffs))
+plt.plot(data, '*')
+plt.show()
+
+plt.plot(numpy.real(numpy.fft.ifft(2 * numpy.pi * freqs * 1j * coeffs)))
+plt.show()

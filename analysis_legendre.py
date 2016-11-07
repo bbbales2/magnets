@@ -1,36 +1,37 @@
 #!/usr/bin/env python
 
+#%%
 import numpy as np
 import pandas as pd
 import scipy.interpolate
 
 def gen_legendre_poly(n, xs, dx = False, integrate = False):
-    
+
     if n % 2 == 0:
         M = int(float(n)/2)
     else:
         M = int(float(n - 1)/2)
 
     z = np.zeros((xs.shape[0]))
-    
+
     for i in range(M+1):
         num = np.math.factorial(2*n - 2*i)
         d1 = (2**n) * np.math.factorial(i)
         d2 = np.math.factorial(n - i)
         d3 = np.math.factorial(n - 2*i)
-        
+
         for j in range(xs.shape[0]):
             if dx:
-                z[j] += (-1)**i * (n - 2*i) * (num / (d1 * d2 * d3)) * (xs[j] ** (n - 2*i - 1))
+                z[j] += (-1)**i * (n - 2*i) * (num / float(d1 * d2 * d3)) * (xs[j] ** (n - 2*i - 1))
             elif integrate:
-                z[j] += (-1)**i * (num / (d1 * d2 * d3 * (n - 2*i + 1))) * (xs[j] ** (n - 2*i + 1))
+                z[j] += (-1)**i * (num / float(d1 * d2 * d3 * (n - 2*i + 1))) * (xs[j] ** (n - 2*i + 1))
             else:
-                z[j] += (-1)**i * (num / (d1 * d2 * d3)) * (xs[j] ** (n - 2*i))
+                z[j] += (-1)**i * (num / float(d1 * d2 * d3)) * (xs[j] ** (n - 2*i))
 
     return z
 
 def gen_fourier(n, xs, dx = False, integrate = False):
-    
+
     z = np.zeros((xs.shape[0]))
 
     for i in range(n):
@@ -43,12 +44,12 @@ def gen_fourier(n, xs, dx = False, integrate = False):
                 z[j] += np.real(np.exp(2 * 1j * np.pi * i * xs[j]))
 
     return z
-    
+
 def gen_legendre_poly_2d(n, m, xs, ys, dx = False, dy = False, intx = False, inty = False):
-    
+
     xl = gen_legendre_poly(n, xs, dx = dx, integrate = intx)
     yl = gen_legendre_poly(m, ys, dx = dy, integrate = inty)
-    
+
     z = np.zeros((xs.shape[0],ys.shape[0]))
     for l in range(xs.shape[0]):
         for k in range(ys.shape[0]):
@@ -68,10 +69,10 @@ def gen_fourier_2d(n, m, xs, ys, dx = False, dy = False, intx = False, inty = Fa
 def fit(M, I=4, J=4, dx = False, dy = False, intx = False, inty = False, gen_func=gen_legendre_poly_2d):
 
     x = np.linspace(-1,1,50)
-    y = np.linspace(-1,1,50) 
-    
+    y = np.linspace(-1,1,50)
+
     V = np.zeros((50,50,I,J))
-    
+
     if dx:
         i_bounds = range(1,I+1)
     else:
@@ -102,17 +103,37 @@ def fit(M, I=4, J=4, dx = False, dy = False, intx = False, inty = False, gen_fun
 
     a = np.linalg.solve(Q, W)
     V = V.reshape((50,50,I*J))
-    
+
     plt.imshow(np.einsum('abc,c', V, a))
     plt.show()
 
+    Vn = np.zeros((50, 50, I, J))
+
+    for i in i_bounds:
+        for j in range(J):
+            Vn[:,:,i-1,j] = gen_func(i,j,x,y)
+
+    f, axarr = plt.subplots(I, J)
+    for i in range(I):
+        for j in range(J):
+            axarr[i,j].imshow(Vn[:,:,i,j])
+            axarr[i,j].set_axis_off()
+
+    plt.show()
+
+    Vn = Vn.reshape((50,50,I*J))
+
+    plt.imshow(np.einsum('abc,c', Vn, a))
+    plt.show()
+
+
 def read_data():
-    
-    df = pd.read_pickle("../data/Gd_alldata.p")
-    
+
+    df = pd.read_pickle("/home/bbales2/magnets/Gd_alldata.p")
+
     def split_MTs(df, col="Magnetic Field (T)", precision=3):
         return df.groupby(lambda x: np.around(df[col][x], precision))
-    
+
     temps = np.linspace(235, 370, 100)
     Mhs = []
     Ts = []
@@ -140,7 +161,7 @@ def read_data():
         Ts.append(T)
 
         M[T] = np.array((temperature, mags))
-    
+
     idx = np.argsort(Ts)
     Ts = np.array(Ts)[idx]
     Mhs = np.array(Mhs)[idx]
@@ -149,18 +170,49 @@ def read_data():
 
     Ts2 = np.linspace(min(Ts), max(Ts), 50)
     temps2 = np.linspace(min(temps), max(temps), 50)
-    
+
     Mhis = interp(temps2, Ts2)
 
     return Mhis
-    
+#%%
 if __name__ == "__main__":
-    
+
     import matplotlib.pyplot as plt
-    
-    Mhis = read_data()
+
+    #Mhis = read_data()
+
+    #Mhis -= Mhis.mean()
+
+    xs = np.linspace(-1,1,50)
+    for i in range(6):
+        z = gen_legendre_poly(i, xs, integrate = True)
+        plt.plot(xs, z)
+
+    plt.show()
 
     #fit(Mhis,dx=True,inty=True,gen_func=gen_legendre_poly_2d)
-    fit(Mhis,gen_func=gen_legendre_poly_2d, dx=True, inty=True)
+    #fit(Mhis,gen_func=gen_legendre_poly_2d, dx=True, inty=True)
     #fit(Mhis,gen_func=gen_fourier_2d)
 
+#%%
+
+import numpy
+
+m = numpy.fft.fft2(Mhis)
+
+alpha = 0.1
+y = 1.0
+
+w = 2.0 * numpy.pi * numpy.fft.fftfreq(Mhis.shape[0], 1.0)
+wx, wy = numpy.meshgrid(w, w)
+
+out = m * wx / (wy)
+
+out[0, :] = 0
+
+s = numpy.fft.ifft2(out)
+
+plt.imshow(numpy.real(s))
+plt.show()
+#w2 = w * w
+#wx2, wy2 = numpy.meshgrid(w2, w2)
