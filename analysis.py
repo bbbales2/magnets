@@ -67,11 +67,17 @@ plt.show()
 
 interp = scipy.interpolate.interp2d(temps, Ts, Mhs)
 
-Ts2 = numpy.linspace(min(Ts), max(Ts), 500)
-temps2 = numpy.linspace(min(temps), max(temps), 500)
+Ts2 = numpy.linspace(min(Ts), max(Ts), 20)
+temps2 = numpy.linspace(min(temps), max(temps), 20)
 
 Mhis = interp(temps2, Ts2)
+#%%
+import pickle
 
+f = open("mhi", "w")
+pickle.dump(Mhis, f)
+f.close()
+#%%
 plt.imshow(Mhis, interpolation = 'NONE')
 plt.show()
 

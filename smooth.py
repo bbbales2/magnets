@@ -3,7 +3,7 @@
 import numpy
 import matplotlib.pyplot as plt
 
-N = 20
+N = 100
 
 hs = numpy.linspace(0, 1.0, N)
 ts = numpy.linspace(0, 1.0, N)
@@ -55,12 +55,22 @@ def getm(s, m0):
     for i in range(N):
         m[i] = m0[i]
         for j in range(N):
+            for jh in range(1, j + 1):
+                m[i, j] += (s[i + 1, jh] - s[i, jh]) * dt / dh
+
+    return m
+
+def getm2(s):
+    m = numpy.zeros((N, N))
+
+    for i in range(N - 1):
+        for j in range(N):
             for jh in range(0, j + 1):
                 m[i, j] += (s[i + 1, jh] - s[i, jh]) * dt / dh
 
     return m
 
-alpha = 0.0001
+alpha = 0.0
 
 def loss(m, m0, s):
     #losst = 0.0#
@@ -92,7 +102,25 @@ def dlossdm0(m, m0):
 
 def dlossds(m, s):
     #dlossds = numpy.zeros((N + 1, N))
-    dloss = 2 * numpy.einsum('ijkl,ij', dmds, (m - mh))
+
+    dloss = numpy.zeros((N + 1, N))
+
+    tmp = (m - mh)
+
+    for i in range(0, N + 1):
+        for j in range(N - 1, 0, -1):
+            jh = j
+
+            if j < N - 1:
+                dloss[i, j] = dloss[i, j + 1]
+
+            if i < N:
+                dloss[i, j] += -2 * tmp[i, jh] * dt / dh
+
+            if i > 0:
+                dloss[i, j] += 2 * tmp[i - 1, jh] * dt / dh
+
+    #dloss = 2 * numpy.einsum('ijkl,ij', dmds, (m - mh))
 
     for i in range(N):
         for j in range(N):
@@ -106,6 +134,51 @@ def dlossds(m, s):
     return dloss
 
 #%%
+m = getm(s, m0)
+a = 2 * numpy.einsum('ijkl,ij', dmds, (m - mh))
+
+#b = numpy.zeros((N + 1, N))
+
+#tmp = (m - mh)
+
+#for i in range(0, N + 1):
+#    for j in range(1, N):
+#        for jh in range(j, N):
+#            if i < N:
+#                b[i, j] += -2 * tmp[i, jh] * dt / dh
+
+#            if i > 0:
+#                b[i, j] += 2 * tmp[i - 1, jh] * dt / dh
+
+b = numpy.zeros((N + 1, N))
+
+tmp = (m - mh)
+
+for i in range(0, N + 1):
+    for j in range(N - 1, 0, -1):
+        jh = j
+
+        if j < N - 1:
+            b[i, j] = b[i, j + 1]
+
+        if i < N:
+            b[i, j] += -2 * tmp[i, jh] * dt / dh
+
+        if i > 0:
+            b[i, j] += 2 * tmp[i - 1, jh] * dt / dh
+
+        #for jh in range(j, N):
+
+plt.imshow(a, interpolation = 'NONE')
+plt.colorbar()
+plt.show()
+plt.imshow(b, interpolation = 'NONE')
+plt.colorbar()
+plt.show()
+
+print sum(numpy.abs((a - b).flatten()))
+
+#%%
 
 
 s = numpy.random.randn(N + 1, N)
@@ -116,18 +189,18 @@ approx1 = numpy.zeros(N)
 
 exact = dlossds(getm(s, m0), s)
 exact1 = dlossdm0(getm(s, m0), m0)
-
-for i in range(N + 1):
-    for j in range(N):
+#%%
+for i in [5, 7]:#range(N + 1):
+    for j in [23, 27]:#range(N):
         sh = s.copy()
 
         sh[i, j] *= 1.0001
 
         approx[i, j] = (loss(getm(s, m0), m0, s) - loss(getm(sh, m0), m0, sh)) / (s[i, j] - sh[i, j])
 
-        #print exact[i, j], approx[i, j]
+        print exact[i, j], approx[i, j]
 #%%
-for i in range(N):
+for i in range(5):#N):
     m0h = m0.copy()
 
     m0h[i] *= 1.0001
@@ -168,8 +241,8 @@ while 1:
     dlds /= norm
     dldm /= norm
 
-    s -= dlds * 1.0e0
-    m0 -= dldm * 1.0e0
+    s -= dlds * 4.0e0
+    m0 -= dldm * 4.0e0
 
     s[N] = 0
 
