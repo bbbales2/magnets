@@ -67,8 +67,8 @@ plt.show()
 
 interp = scipy.interpolate.interp2d(temps, Ts, Mhs)
 
-Ts2 = numpy.linspace(min(Ts), max(Ts), 20)
-temps2 = numpy.linspace(min(temps), max(temps), 20)
+Ts2 = numpy.linspace(min(Ts), max(Ts), 100)
+temps2 = numpy.linspace(min(temps), max(temps), 100)
 
 Mhis = interp(temps2, Ts2)
 #%%

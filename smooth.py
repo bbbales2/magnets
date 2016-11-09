@@ -49,7 +49,60 @@ for i in range(N):
 numpy.count_nonzero(dmds - dmds1)
 #%%
 
-def getm(s, m0):
+import os
+
+os.chdir('/home/bbales2/magnets')
+
+import numpy
+import pyximport
+pyximport.install(reload_support = True)
+import smooth_funcs# import getm, loss, dlossdm0, dlossds
+import scipy
+reload(smooth_funcs)
+alpha = 0.0001
+
+s = numpy.random.randn(N + 1, N)
+m0 = numpy.random.randn(N)
+
+approx = numpy.zeros((N + 1, N))
+
+exact = smooth_funcs.dlossds(alpha, N, dt, dh, smooth_funcs.getm(N, dt, dh, s, m0), mh, s)
+
+m = smooth_funcs.getm(N, dt, dh, s, m0)
+m[0, 0] = 1.0
+mh[0, 0] = 2.0
+print smooth_funcs.loss(alpha, N, dt, dh, m, mh, m0, s)
+print loss2(m, m0, s)
+print numpy.sum((m - mh)**2)
+#%%
+for i in range(N + 1):
+    for j in range(N):
+        sh = s.copy()
+
+        sh[i, j] *= 1.00001
+
+        #approx[i, j] = (loss(alpha, N, dt, dh, getm(N, dt, dh, s, m0), mh, m0, s) - loss(alpha, N, dt, dh, getm(N, dt, dh, sh, m0), mh, m0, sh)) / (s[i, j] - sh[i, j])
+        approx[i, j] = (smooth_funcs.loss(alpha, N, dt, dh, smooth_funcs.getm(N, dt, dh, s, m0), mh, m0, s) - smooth_funcs.loss(alpha, N, dt, dh, smooth_funcs.getm(N, dt, dh, sh, m0), mh, m0, sh)) / (s[i, j] - sh[i, j])
+
+        #print exact[i, j], approx[i, j]
+
+plt.imshow(approx - exact, interpolation = 'NONE')
+plt.colorbar()
+plt.show()
+
+plt.imshow(approx, interpolation = 'NONE')
+plt.colorbar()
+plt.show()
+
+plt.imshow(exact, interpolation = 'NONE')
+plt.colorbar()
+plt.show()
+#%%
+plt.imshow(getm(N, dt, dh, sh, m0), interpolation = 'NONE')
+
+#%%
+
+def getm2(s, m0):
     m = numpy.zeros((N, N))
 
     for i in range(N):
@@ -60,19 +113,9 @@ def getm(s, m0):
 
     return m
 
-def getm2(s):
-    m = numpy.zeros((N, N))
+#alpha = 0.0001
 
-    for i in range(N - 1):
-        for j in range(N):
-            for jh in range(0, j + 1):
-                m[i, j] += (s[i + 1, jh] - s[i, jh]) * dt / dh
-
-    return m
-
-alpha = 0.0
-
-def loss(m, m0, s):
+def loss2(m, m0, s):
     #losst = 0.0#
     losst = numpy.sum((m - mh)**2)
 
@@ -89,7 +132,7 @@ def loss(m, m0, s):
                 losst += alpha * (s[i, j + 1] - s[i, j])**2 / (dt ** 2)
 
     return losst
-
+#%%
 def dlossdm0(m, m0):
     dloss = numpy.sum(2 * (m - mh), axis = 1)
 
@@ -134,7 +177,7 @@ def dlossds(m, s):
     return dloss
 
 #%%
-m = getm(s, m0)
+m = getm(N, dt, dh, s, m0)
 a = 2 * numpy.einsum('ijkl,ij', dmds, (m - mh))
 
 #b = numpy.zeros((N + 1, N))
@@ -180,25 +223,8 @@ print sum(numpy.abs((a - b).flatten()))
 
 #%%
 
-
-s = numpy.random.randn(N + 1, N)
-m0 = numpy.random.randn(N)
 #%%
-approx = numpy.zeros((N + 1, N))
-approx1 = numpy.zeros(N)
 
-exact = dlossds(getm(s, m0), s)
-exact1 = dlossdm0(getm(s, m0), m0)
-#%%
-for i in [5, 7]:#range(N + 1):
-    for j in [23, 27]:#range(N):
-        sh = s.copy()
-
-        sh[i, j] *= 1.0001
-
-        approx[i, j] = (loss(getm(s, m0), m0, s) - loss(getm(sh, m0), m0, sh)) / (s[i, j] - sh[i, j])
-
-        print exact[i, j], approx[i, j]
 #%%
 for i in range(5):#N):
     m0h = m0.copy()
@@ -211,18 +237,6 @@ print approx1
 print exact1
 
 #%%
-plt.imshow(approx - exact, interpolation = 'NONE')
-plt.colorbar()
-plt.show()
-#%%
-plt.imshow(approx, interpolation = 'NONE')
-plt.colorbar()
-plt.show()
-
-plt.imshow(exact, interpolation = 'NONE')
-plt.colorbar()
-plt.show()
-
 #%%
 
 s = numpy.random.randn(N + 1, N)
@@ -231,18 +245,18 @@ m0 = numpy.random.randn(N)
 
 #%%
 while 1:
-    m = getm(s, m0)
+    m = smooth_funcs.getm(N, dt, dh, s, m0)
 
-    l = loss(m, m0, s)
-    dlds = dlossds(m, s)
-    dldm = dlossdm0(m, m0)
+    l = smooth_funcs.loss(alpha, N, dt, dh, m, mh, m0, s)
+    dlds = smooth_funcs.dlossds(alpha, N, dt, dh, m, mh, s)
+    dldm = smooth_funcs.dlossdm0(alpha, N, dt, dh, m, mh, m0)
 
     norm = numpy.linalg.norm(dlds.flatten()) + numpy.linalg.norm(dldm.flatten())
     dlds /= norm
     dldm /= norm
 
-    s -= dlds * 4.0e0
-    m0 -= dldm * 4.0e0
+    s -= dlds * 1.0
+    m0 -= dldm * 1.0
 
     s[N] = 0
 
@@ -251,6 +265,18 @@ while 1:
 #%%
 
 import pickle
+
+dS = numpy.zeros((N + 1, N))
+
+for i in range(1, N):
+    dS[N - i - 1, : N - 1] = dS[N - i, : N - 1] + dh * (mh[N - i, 1:] - mh[N - i, :-1]) / dt#dmdts[i - 1]
+
+s = dS
+
+plt.imshow(dS)
+plt.colorbar()
+plt.show()
+#%%
 
 f = open('/home/bbales2/magnets/mhi')
 mh = numpy.flipud(pickle.load(f))
@@ -268,7 +294,7 @@ plt.title('s')
 plt.colorbar()
 plt.show()
 
-plt.imshow(getm(s, m0), interpolation = 'NONE')
+plt.imshow(getm(N, dt, dh, s, m0), interpolation = 'NONE')
 plt.title('m')
 plt.colorbar()
 plt.show()
@@ -278,7 +304,7 @@ plt.title('mh')
 plt.colorbar()
 plt.show()
 
-plt.imshow(getm(s, m0) - mh, interpolation = 'NONE')
+plt.imshow(getm(N, dt, dh, s, m0) - mh, interpolation = 'NONE')
 plt.title('error (m - mh)')
 plt.colorbar()
 plt.show()
