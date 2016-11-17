@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 os.chdir("/home/bbales2/magnets")
 
-df = pandas.read_pickle("Gd_alldata.p")
+df = pandas.read_pickle("FeGe_alldata.p")
 
 #%%
 
@@ -16,28 +16,20 @@ def split_MTs(df, col="Magnetic Field (T)", precision=3):
 
 M = {}
 
-temps = numpy.linspace(225, 375, 100)
+temps = numpy.linspace(269, 281, 200)
 Mhs = []
 Ts = []
 
 for T, data in split_MTs(df):
     idx = numpy.argmin(data['Temperature (K)'].values)
 
-    #plt.plot(data['Temperature (K)'][idx:], data['normalized_moment_cgs'][idx:])
-
-
     temperatures = []
     mags = []
 
-    #for i in range(data.index[0], idx):
     temperature = []
     mags = []
 
     for temp, mag in zip(data['Temperature (K)'][idx:], data['normalized_moment_cgs'][idx:]):
-
-        #if temp < 230 or temp > 375:
-        #    continue
-
         temperature.append(temp)
         mags.append(mag)
 
@@ -74,7 +66,7 @@ Mhis = interp(temps2, Ts2)
 #%%
 import pickle
 
-f = open("mhi", "w")
+f = open("mhi_100x100_fege", "w")
 pickle.dump(Mhis, f)
 f.close()
 #%%

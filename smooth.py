@@ -3,7 +3,7 @@
 import numpy
 import matplotlib.pyplot as plt
 
-N = 100
+N = 20
 
 hs = numpy.linspace(0, 1.0, N)
 ts = numpy.linspace(0, 1.0, N)
@@ -59,7 +59,7 @@ pyximport.install(reload_support = True)
 import smooth_funcs# import getm, loss, dlossdm0, dlossds
 import scipy
 reload(smooth_funcs)
-alpha = 0.0001
+alpha = 0.000
 
 s = numpy.random.randn(N + 1, N)
 m0 = numpy.random.randn(N)
@@ -74,6 +74,78 @@ mh[0, 0] = 2.0
 print smooth_funcs.loss(alpha, N, dt, dh, m, mh, m0, s)
 print loss2(m, m0, s)
 print numpy.sum((m - mh)**2)
+#%%
+reload(smooth_funcs)
+
+m = smooth_funcs.getm(N, dt, dh, s, m0)
+exact1 = smooth_funcs.dlossdm0(alpha, N, dt, dh, m, mh, m0)
+approx1 = numpy.zeros(N)
+
+for i in range(N):
+    m0h = m0.copy()
+
+    m0h[i] *= 1.0001
+
+    approx1[i] = (smooth_funcs.loss(alpha, N, dt, dh, m, mh, m0, s) - smooth_funcs.loss(alpha, N, dt, dh, smooth_funcs.getm(N, dt, dh, s, m0h), mh, m0h, s)) / (m0[i] - m0h[i])
+
+#(loss(getm(s, m0), m0, s) - loss(getm(s, m0h), m0h, s)) / (m0[i] - m0h[i])
+#print max(numpy.abs(approx - exact).flatten())
+print approx1
+print exact1
+#%%
+reload(smooth_funcs)
+
+m = smooth_funcs.getm(N, dt, dh, s, m0)
+jacexact1 = smooth_funcs.jacm0(alpha, N, dt, dh)
+jacapprox1 = numpy.zeros((N, N))
+
+for i in range(N):
+    m0h = m0.copy()
+
+    m0h[i] *= 1.0001
+
+    m = smooth_funcs.getm(N, dt, dh, s, m0)
+    dldm1 = smooth_funcs.dlossdm0(alpha, N, dt, dh, m, mh, m0)
+
+    m = smooth_funcs.getm(N, dt, dh, s, m0h)
+    dldm2 = smooth_funcs.dlossdm0(alpha, N, dt, dh, m, mh, m0h)
+
+    jacapprox1[:, i] = (dldm1 - dldm2) / (m0[i] - m0h[i])
+
+#(loss(getm(s, m0), m0, s) - loss(getm(s, m0h), m0h, s)) / (m0[i] - m0h[i])
+#print max(numpy.abs(approx - exact).flatten())
+print jacapprox1[:, :]
+print jacexact1[:, :]
+#%%
+jacapprox = numpy.zeros((N + 1, N, N + 1, N))
+jacexact = smooth_funcs.jacs(alpha, N, dt, dh, dmds1)
+#%%
+for i in [5]:#range(N + 1):
+    for j in [5]:#range(N):
+        sh = s.copy()
+
+        sh[i, j] *= 1.00001
+
+        dl1s = smooth_funcs.dlossds(alpha, N, dt, dh, smooth_funcs.getm(N, dt, dh, s, m0), mh, s)
+        dl2s = smooth_funcs.dlossds(alpha, N, dt, dh, smooth_funcs.getm(N, dt, dh, sh, m0), mh, sh)
+
+        jacapprox[:, :, i, j] = (dl1s - dl2s) / (s[i, j] - sh[i, j])
+
+        #approx[i, j] = (loss(alpha, N, dt, dh, getm(N, dt, dh, s, m0), mh, m0, s) - loss(alpha, N, dt, dh, getm(N, dt, dh, sh, m0), mh, m0, sh)) / (s[i, j] - sh[i, j])
+        #approx[i, j] = (smooth_funcs.loss(alpha, N, dt, dh, smooth_funcs.getm(N, dt, dh, s, m0), mh, m0, s) - smooth_funcs.loss(alpha, N, dt, dh, smooth_funcs.getm(N, dt, dh, sh, m0), mh, m0, sh)) / (s[i, j] - sh[i, j])
+
+#%%
+plt.imshow(jacapprox[:, :, 5, 5] - jacexact[:, :, 5, 5], interpolation = 'NONE')
+plt.colorbar()
+plt.show()
+
+plt.imshow(jacapprox[:, :, 5, 5], interpolation = 'NONE')
+plt.colorbar()
+plt.show()
+
+plt.imshow(jacexact[:, :, 5, 5], interpolation = 'NONE')
+plt.colorbar()
+plt.show()
 #%%
 for i in range(N + 1):
     for j in range(N):
@@ -226,15 +298,7 @@ print sum(numpy.abs((a - b).flatten()))
 #%%
 
 #%%
-for i in range(5):#N):
-    m0h = m0.copy()
 
-    m0h[i] *= 1.0001
-
-    approx1[i] = (loss(getm(s, m0), m0, s) - loss(getm(s, m0h), m0h, s)) / (m0[i] - m0h[i])
-#print max(numpy.abs(approx - exact).flatten())
-print approx1
-print exact1
 
 #%%
 #%%
