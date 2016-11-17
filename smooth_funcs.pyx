@@ -3,6 +3,7 @@
 cimport numpy
 import numpy
 
+# get M
 cpdef numpy.ndarray[numpy.double_t, ndim = 2] getm(int N, double dt, double dh, numpy.ndarray[numpy.double_t, ndim = 2] s, numpy.ndarray[numpy.double_t, ndim = 1] m0):
     cdef numpy.ndarray[numpy.double_t, ndim = 2] m
     cdef int i, j, jh
@@ -17,6 +18,27 @@ cpdef numpy.ndarray[numpy.double_t, ndim = 2] getm(int N, double dt, double dh, 
 
     return m
 
+# loss function assuming it has been partially calculated, for use when using interpolation solution
+cpdef loss2(double alpha, int N, double dt, double dh, numpy.ndarray[numpy.double_t, ndim = 1] m0, numpy.ndarray[numpy.double_t, ndim = 2] s):
+    cdef double losst
+    cdef int i, j, jh
+
+    losst = 0.0
+
+    for i in range(N):
+        if i < N - 1:
+            losst += alpha * (m0[i + 1] - m0[i])**2 / dh ** 2
+
+    for i in range(N):
+        for j in range(N):
+            losst += alpha * (s[i + 1, j] - s[i, j])**2 / (dh ** 2)
+
+            if j < N - 1:
+                losst += alpha * (s[i, j + 1] - s[i, j])**2 / (dt ** 2)
+    
+    return losst
+
+# loss function
 cpdef loss(double alpha, int N, double dt, double dh, numpy.ndarray[numpy.double_t, ndim = 2] m, numpy.ndarray[numpy.double_t, ndim = 2] mh, numpy.ndarray[numpy.double_t, ndim = 1] m0, numpy.ndarray[numpy.double_t, ndim = 2] s):
     cdef double losst
     cdef int i, j, jh
@@ -26,7 +48,6 @@ cpdef loss(double alpha, int N, double dt, double dh, numpy.ndarray[numpy.double
     for i in range(N):
         for j in range(N):
             losst += (m[i, j] - mh[i, j]) * (m[i, j] - mh[i, j])
-    #losst = numpy.sum((m - mh)**2)
 
     for i in range(N):
         if i < N - 1:
@@ -34,26 +55,16 @@ cpdef loss(double alpha, int N, double dt, double dh, numpy.ndarray[numpy.double
 
     for i in range(N):
         for j in range(N):
-            #print 'hi', alpha
             losst += alpha * (s[i + 1, j] - s[i, j])**2 / (dh ** 2)
 
             if j < N - 1:
                 losst += alpha * (s[i, j + 1] - s[i, j])**2 / (dt ** 2)
-
+    
     return losst
 
-cpdef numpy.ndarray[numpy.double_t, ndim = 1] dlossdm0(double alpha, int N, double dt, double dh, numpy.ndarray[numpy.double_t, ndim = 2] m, numpy.ndarray[numpy.double_t, ndim = 2] mh, numpy.ndarray[numpy.double_t, ndim = 1] m0):
-    cdef numpy.ndarray[numpy.double_t, ndim = 1] dloss
-    cdef numpy.ndarray[numpy.double_t, ndim = 2] tmp
+# dl/dm0 assuming it has been partially calculated, for use in interpolation solution
+cpdef numpy.ndarray[numpy.double_t, ndim = 1] dlossdm02(double alpha, int N, double dt, double dh, numpy.ndarray[numpy.double_t, ndim = 1] m0, numpy.ndarray[numpy.double_t, ndim = 1] dloss):
     cdef int i
-
-    tmp = (m - mh)
-
-    #dloss = numpy.sum(2 * (m - mh), axis = 1)
-    dloss = numpy.zeros(N)
-    for i in range(N):
-        for j in range(N):
-            dloss[i] += 2 * tmp[i, j]
 
     for i in range(N):
         if i < N - 1:
@@ -62,30 +73,53 @@ cpdef numpy.ndarray[numpy.double_t, ndim = 1] dlossdm0(double alpha, int N, doub
 
     return dloss
 
-cpdef numpy.ndarray[numpy.double_t, ndim = 2] jacm0(double alpha, int N, double dt, double dh):
-    cdef numpy.ndarray[numpy.double_t, ndim = 2] out
+# dl/dm0 full
+cpdef numpy.ndarray[numpy.double_t, ndim = 1] dlossdm0(double alpha, int N, double dt, double dh, numpy.ndarray[numpy.double_t, ndim = 2] m, numpy.ndarray[numpy.double_t, ndim = 2] mh, numpy.ndarray[numpy.double_t, ndim = 1] m0):
+    cdef numpy.ndarray[numpy.double_t, ndim = 1] dloss
     cdef int i
 
-    out = numpy.zeros((N, N))
-    for i in range(N):
-        for j in range(N):
-            out[i, i] += 2.0
-        #for j in range(N):
-        #    out[i, j] += 2 * dmds[i, j, i, 0]
+    dloss = numpy.sum(2 * (m - mh), axis = 1)
 
     for i in range(N):
         if i < N - 1:
-            out[i, i + 1] -= 2 * alpha / dh**2
-            out[i, i] += 2 * alpha / dh**2
+            dloss[i] += -2 * alpha * (m0[i + 1] - m0[i]) / dh**2
+            dloss[i + 1] += 2 * alpha * (m0[i + 1] - m0[i]) / dh**2
 
-            out[i + 1, i + 1] += 2 * alpha / dh**2
-            out[i + 1, i] -= 2 * alpha / dh**2
+    return dloss
 
-            #dloss[i] += -2 * alpha * (m0[i + 1] - m0[i]) / dh**2
-            #dloss[i + 1] += 2 * alpha * (m0[i + 1] - m0[i]) / dh**2
+# dl/ds assuming it has been partially calculated, for us in interpolation solution
+cpdef numpy.ndarray[numpy.double_t, ndim = 2] dlossds2(double alpha, int N, double dt, double dh, numpy.ndarray[numpy.double_t, ndim = 2] tmp, numpy.ndarray[numpy.double_t, ndim = 2] s):
+    
+    cdef numpy.ndarray[numpy.double_t, ndim = 2] dloss
+    cdef int i,j, jh
 
-    return out#dloss
+    dloss = numpy.zeros((N + 1, N))
 
+    for i in range(0, N + 1):
+        for j in range(N - 1, 0, -1):
+            jh = j
+
+            if j < N - 1:
+                dloss[i, j] = dloss[i, j + 1]
+
+            if i < N:
+                dloss[i, j] += 2 * tmp[i, jh] * dt / dh
+
+            if i > 0:
+                dloss[i, j] += -2 * tmp[i - 1, jh] * dt / dh
+
+    for i in range(N):
+        for j in range(N):
+            dloss[i, j] += -2 * alpha * (s[i + 1, j] - s[i, j]) / dh**2
+            dloss[i + 1, j] += 2 * alpha * (s[i + 1, j] - s[i, j]) / dh**2
+
+            if j < N - 1:
+                dloss[i, j] += -2 * alpha * (s[i, j + 1] - s[i, j]) / dt**2
+                dloss[i, j + 1] += 2 * alpha * (s[i, j + 1] - s[i, j]) / dt**2
+    
+    return dloss
+
+# dl/ds full
 cpdef numpy.ndarray[numpy.double_t, ndim = 2] dlossds(double alpha, int N, double dt, double dh, numpy.ndarray[numpy.double_t, ndim = 2] m, numpy.ndarray[numpy.double_t, ndim = 2] mh, numpy.ndarray[numpy.double_t, ndim = 2] s):
     cdef numpy.ndarray[numpy.double_t, ndim = 2] dloss, tmp
     cdef int i, j, jh
@@ -117,44 +151,3 @@ cpdef numpy.ndarray[numpy.double_t, ndim = 2] dlossds(double alpha, int N, doubl
                 dloss[i, j + 1] += 2 * alpha * (s[i, j + 1] - s[i, j]) / dt**2
 
     return dloss
-
-cpdef numpy.ndarray[numpy.double_t, ndim = 4] jacs(double alpha, int N, double dt, double dh, numpy.ndarray[numpy.double_t, ndim = 4] dmds):
-    cdef numpy.ndarray[numpy.double_t, ndim = 4] out
-    cdef int i, j
-
-    out = numpy.zeros((N + 1, N, N + 1, N))
-
-    for i in range(0, N + 1):
-        for j in range(N - 1, 0, -1):
-            if j < N - 1:
-                out[i, j] = out[i, j + 1]
-
-            if i < N:
-                out[i, j] += -2 * dmds[i, j] * dt / dh
-
-            if i > 0:
-                out[i, j] += 2 * dmds[i - 1, j] * dt / dh
-
-    for i in range(N):
-        for j in range(N):
-            out[i, j, i + 1, j] -= 2 * alpha / dh**2
-            out[i, j, i, j] += 2 * alpha / dh**2
-
-            out[i + 1, j, i + 1, j] += 2 * alpha / dh**2
-            out[i + 1, j, i, j] -= 2 * alpha / dh**2
-
-            if j < N - 1:
-                out[i, j, i, j + 1] -= 2 * alpha / dh**2
-                out[i, j, i, j] += 2 * alpha / dh**2
-
-                out[i, j + 1, i + 1, j] += 2 * alpha / dh**2
-                out[i, j + 1, i, j] -= 2 * alpha / dh**2
-
-            #dloss[i, j] += -2 * alpha * (s[i + 1, j] - s[i, j]) / dh**2
-            #dloss[i + 1, j] += 2 * alpha * (s[i + 1, j] - s[i, j]) / dh**2
-
-            #if j < N - 1:
-            #    dloss[i, j] += -2 * alpha * (s[i, j + 1] - s[i, j]) / dt**2
-            #    dloss[i, j + 1] += 2 * alpha * (s[i, j + 1] - s[i, j]) / dt**2
-
-    return out
