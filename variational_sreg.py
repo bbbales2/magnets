@@ -15,9 +15,9 @@ f.close()
 
 #m = numpy.flipud(m)
 
-m = m[::4, ::4]
+m = m[::, ::]
 
-plt.imshow(m)
+plt.imshow(numpy.flipud(m), extent = [0.0, 1.0, 0.0, 1.0])
 plt.colorbar()
 plt.show()
 
@@ -38,7 +38,7 @@ dy = ys[1] - ys[0]
 #plt.show()
 #%%
 
-a = 0.0001
+a = 0.00001
 
 A = numpy.zeros((m.shape[0], m.shape[1], m.shape[0], m.shape[1]))
 b = numpy.zeros(m.shape)
@@ -225,21 +225,21 @@ A = numpy.reshape(A, (A.shape[0] * A.shape[1], A.shape[0] * A.shape[1]))
 
 phi = numpy.linalg.solve(A, b.flatten()).reshape(m.shape)
 
-plt.imshow(phi, interpolation = 'NONE')
+plt.imshow(numpy.flipud(phi), interpolation = 'NONE', extent = [0.0, 1.0, 0.0, 1.0])
 plt.title('$\Phi$, {0}'.format(fname))
 plt.colorbar()
 plt.show()
 
 m__ = numpy.gradient(phi, dy, axis = 0)
 
-plt.imshow(m__, interpolation = 'NONE')
+plt.imshow(numpy.flipud(m__), interpolation = 'NONE', extent = [0.0, 1.0, 0.0, 1.0])
 plt.title('$M$, {0}'.format(fname))
 plt.colorbar()
 plt.show()
 
 s__ = numpy.gradient(phi, dx, axis = 1)
 
-plt.imshow(s__, interpolation = 'NONE')
+plt.imshow(numpy.flipud(s__), interpolation = 'NONE', extent = [0.0, 1.0, 0.0, 1.0])
 plt.title('$\Delta S$, {0}'.format(fname))
 plt.colorbar()
 plt.show()
