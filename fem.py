@@ -22,7 +22,7 @@ alpha = 1.0
 
 # Create mesh and define function space
 mesh = RectangleMesh(Point(0.0, 0.0), Point(H, W), 40, 40)
-V = FunctionSpace(mesh, "P", 3)
+V = FunctionSpace(mesh, "CG", 2)
 # Define boundary condition
 tol = 1E-10
 
@@ -61,4 +61,8 @@ plot(u.dx(0), title = "M (computed)")#, mode = "displacement")
 plot(u.dx(0) - mh, title = "M (computed - input)")#, mode = "displacement")
 
 plot(u.dx(1), title = "S")#, mode = "displacement")
+
+plot(u.dx(0).dx(0), title = "dydy")#, mode = "displacement")
+plot(u.dx(0).dx(1), title = "dydx")#, mode = "displacement")
+plot(u.dx(1).dx(1), title = "dxdx")#, mode = "displacement")
 interactive()
