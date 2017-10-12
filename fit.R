@@ -7,7 +7,7 @@ library(scales)
 
 setwd("~/magnets")
 
-df = read_csv("gd.csv") %>%
+df = read_csv("Gd_alldata.csv") %>%
   rename(temp = `Temperature (K)`, mag = `Magnetic Field (T)`, cgs = normalized_moment_cgs) %>%
   mutate(y = rescale(mag, c(-0.5, 0.5))) %>%
   mutate(y = round(y, 2)) %>%
