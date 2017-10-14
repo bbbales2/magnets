@@ -10,9 +10,6 @@ sourceCpp("covariance.cpp")
 (csv = read_csv('cooling_only_Gd_DSm.csv') %>% #'cooling_only_Gd_DSm.csv'
   rename(temp = `Temperature (K)`, field = `Magnetic Field (Oe)`, y = normalized_moment_cgs))
 
-(csv = read_csv('FeGe_ders.csv') %>%
-  rename(y = der))
-
 csv %>% ggplot(aes(temp, y)) +
   geom_point(aes(colour = field), size = 0.1)
 
@@ -63,27 +60,52 @@ fieldp = log(seq(exp(min(field)), exp(max(field)), length = 50))
 xinterp = expand.grid(tempp, fieldp) %>% as.matrix
 
 Ks = sigmaf^2 * rbf_cov_vec(xinterp, xdata, c(ltemp, lfield))
+Kds = sigmaf^2 * rbf_cov_d_vec(xinterp, xdata, c(ltemp, lfield), 0)
 
 Sigmainvy = fsolve(Sigma, df %>% pull(y))
 #solve(Sigma, df %>% pull(y))
 
-xinterp %>% as.tibble %>%
-  rename(temp = Var1, field = Var2) %>%
-  mutate(y = Ks %*% Sigmainvy) %>%
+M = xinterp %>% as.tibble %>%
+    rename(temp = Var1, field = Var2) %>%
+    mutate(y = Ks %*% Sigmainvy)
+
+M %>%
   ggplot(aes(exp(field), y)) +
   geom_point(aes(colour = temp), size = 0.1) +
   geom_point(data = df, size = 0.1, colour = "red")
 
-xinterp %>% as.tibble %>%
-  rename(temp = Var1, field = Var2) %>%
-  mutate(y = Ks %*% Sigmainvy) %>%
+M %>%
   ggplot(aes(temp, y)) +
   geom_point(aes(colour = exp(field)), size = 0.1) +
   geom_point(data = df, size = 0.1, colour = "red")
 
-xinterp %>% as.tibble %>%
-  rename(temp = Var1, field = Var2) %>%
-  mutate(y = Ks %*% Sigmainvy) %>%
+M %>%
   ggplot(aes(temp, exp(field))) +
   geom_tile(aes(fill = y), size = 0.1) +
   geom_point(data = df, size = 0.1, colour = "red")
+
+dMdt = xinterp %>% as.tibble %>%
+  rename(temp = Var1, field = Var2) %>%
+  mutate(y = Kds %*% Sigmainvy)
+
+dMdt %>%
+  ggplot(aes(exp(field), y)) +
+  geom_point(aes(colour = temp), size = 0.1)
+
+dMdt %>%
+  ggplot(aes(temp, y)) +
+  geom_point(aes(colour = exp(field)), size = 0.1)
+
+dMdt %>%
+  ggplot(aes(temp, exp(field))) +
+  geom_tile(aes(fill = y))
+
+dMdt %>%
+  spread(temp, y) %>% select(-field) %>%
+  cumsum %>%
+  gather(temp, S) %>%
+  mutate(temp = round(as.numeric(temp), 5),
+         field = dMdt %>% arrange(temp) %>% pull(field),
+         S = exp(fieldp[2]) - exp(fieldp[1]) * S) %>%
+  ggplot(aes(temp, exp(field))) +
+  geom_tile(aes(fill = S))

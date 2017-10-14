@@ -62,6 +62,35 @@ NumericMatrix rbf_cov_vec(NumericMatrix x1, NumericMatrix x2, NumericVector l) {
 }
 
 // [[Rcpp::export]]
+NumericMatrix rbf_cov_d_vec(NumericMatrix x1, NumericMatrix x2, NumericVector l, int which) {
+  NumericMatrix Sigma(x1.nrow(), x2.nrow());
+  
+  if(x1.ncol() != x2.ncol() || x2.ncol() != l.size())
+    throw std::domain_error("Cols of x1 should match cols of x2 should match size of l");
+  
+  for(int i = 0; i < x1.nrow(); i++) {
+    for(int j = 0; j < x2.nrow(); j++) {
+      double dot = 0.0;
+      double pre = -2 * (x1(i, which) - x2(j, which)) / (2 * l[which] * l[which]);
+      
+      for(int k = 0; k < l.size(); k++) {
+        dot += (x1(i, k) - x2(j, k)) * (x1(i, k) - x2(j, k)) / (2 * l[k] * l[k]);
+      }
+      
+      Sigma(i, j) = pre * std::exp(-dot);
+    }
+  }
+  
+  if(x1.nrow() == x2.nrow()) {
+    for(int i = 0; i < x1.nrow(); i++) {
+      Sigma(i, i) += 1e-10;
+    }
+  }
+  
+  return Sigma;
+}
+
+// [[Rcpp::export]]
 NumericVector fsolve(NumericMatrix X, NumericVector y) {
   typedef Eigen::Map<Eigen::MatrixXd> MapMatd;
   typedef Eigen::Map<Eigen::VectorXd> MapVecd;
