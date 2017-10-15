@@ -55,8 +55,8 @@ Sigma = sigmaf^2 * rbf_cov_vec(xdata, xdata, c(ltemp, lfield)) + diag(sigma, nro
 
 temp = df %>% pull(temp)
 field = df %>% pull(field)
-tempp = seq(min(temp), max(temp), length = 50)
-fieldp = log(seq(exp(min(field)), exp(max(field)), length = 50))
+tempp = seq(min(temp), max(temp), length = 200)
+fieldp = log(seq(exp(min(field)), exp(max(field)), length = 200))
 xinterp = expand.grid(tempp, fieldp) %>% as.matrix
 
 Ks = sigmaf^2 * rbf_cov_vec(xinterp, xdata, c(ltemp, lfield))
