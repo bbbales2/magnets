@@ -1,6 +1,7 @@
 library(tidyverse)
 library(ggplot2)
 library(rstan)
+library(pracma)
 library(inline)
 library(Rcpp)
 library(RcppEigen)
@@ -8,7 +9,10 @@ library(RcppEigen)
 sourceCpp("covariance.cpp")
 
 (csv = read_csv('cooling_only_Gd_DSm.csv') %>% #'cooling_only_Gd_DSm.csv'
-  rename(temp = `Temperature (K)`, field = `Magnetic Field (Oe)`, y = normalized_moment_cgs))
+  rename(temp = `Temperature (K)`, field = `Magnetic Field (Oe)`, y = normalized_moment_cgs) %>%
+    mutate(field = field / 10000.0,
+           y = y - 170) %>%
+    filter(temp > min(temp) & temp < max(temp)))
 
 csv %>% ggplot(aes(temp, y)) +
   geom_point(aes(colour = field), size = 0.1)
@@ -19,7 +23,7 @@ csv %>% ggplot(aes(temp, y)) +
   ungroup())
 
 ltemp = 30.0
-lfield = 10000.0
+lfield = 1.0
 sigmaf = 100.0
 N = nrow(df)
 
@@ -36,7 +40,7 @@ list(temp = tempp,
   geom_line() +
   geom_point(data = df, colour = "red", size = 0.1)
 
-ltemp = 10.0
+ltemp = 20.0
 lfield = 1.0
 sigmaf = 50.0
 sigma = 5.0
@@ -44,7 +48,7 @@ sigma = 5.0
 (df = csv %>%
     mutate(field = round(field, 4)) %>%
     mutate(field = log(field)) %>%
-    group_by(field) %>% sample_frac(0.2) %>%
+    group_by(field) %>% sample_frac(0.02) %>%
     ungroup())
 
 df %>% ggplot(aes(temp, y)) +
@@ -55,8 +59,9 @@ Sigma = sigmaf^2 * rbf_cov_vec(xdata, xdata, c(ltemp, lfield)) + diag(sigma, nro
 
 temp = df %>% pull(temp)
 field = df %>% pull(field)
-tempp = seq(min(temp), max(temp), length = 200)
+tempp = seq(min(temp), max(temp), length = 100)
 fieldp = log(seq(exp(min(field)), exp(max(field)), length = 200))
+#fieldp = seq(min(field), max(field), length = 200)
 xinterp = expand.grid(tempp, fieldp) %>% as.matrix
 
 Ks = sigmaf^2 * rbf_cov_vec(xinterp, xdata, c(ltemp, lfield))
@@ -100,12 +105,18 @@ dMdt %>%
   ggplot(aes(temp, exp(field))) +
   geom_tile(aes(fill = y))
 
-dMdt %>%
+S = dMdt %>%
   spread(temp, y) %>% select(-field) %>%
   cumsum %>%
   gather(temp, S) %>%
   mutate(temp = round(as.numeric(temp), 5),
          field = dMdt %>% arrange(temp) %>% pull(field),
-         S = exp(fieldp[2]) - exp(fieldp[1]) * S) %>%
+         S = (exp(fieldp[2]) - exp(fieldp[1])) * S)
+
+S %>%
   ggplot(aes(temp, exp(field))) +
-  geom_tile(aes(fill = S))
+  geom_tile(aes(fill = S)) +
+  scale_fill_gradientn(colours = rainbow(10)) 
+
+S %>% summarize_all(min)
+

@@ -1,5 +1,6 @@
 #include <Rcpp.h>
 #include <RcppEigen.h>
+#include <cmath>
 using namespace Rcpp;
 
 // [[Rcpp::depends(RcppEigen)]]
@@ -78,6 +79,36 @@ NumericMatrix rbf_cov_d_vec(NumericMatrix x1, NumericMatrix x2, NumericVector l,
       }
       
       Sigma(i, j) = pre * std::exp(-dot);
+    }
+  }
+  
+  if(x1.nrow() == x2.nrow()) {
+    for(int i = 0; i < x1.nrow(); i++) {
+      Sigma(i, i) += 1e-10;
+    }
+  }
+  
+  return Sigma;
+}
+
+// [[Rcpp::export]]
+NumericMatrix rbf_cov_i_vec(NumericMatrix x1, NumericMatrix x2, NumericVector l, int which) {
+  NumericMatrix Sigma(x1.nrow(), x2.nrow());
+  
+  if(x1.ncol() != x2.ncol() || x2.ncol() != l.size())
+    throw std::domain_error("Cols of x1 should match cols of x2 should match size of l");
+  
+  for(int i = 0; i < x1.nrow(); i++) {
+    for(int j = 0; j < x2.nrow(); j++) {
+      double sum = std::sqrt(3.14159265359 / 2.0) * l[which] * (erf((x1(i, which) - x2(i, which)) / (std::sqrt(2) * l[which])) + erf(x2(i, which) / (std::sqrt(2) * l[which])));
+
+      for(int k = 0; k < l.size(); k++) {
+        if(k != which) {
+          sum += std::exp(-(x1(i, k) - x2(j, k)) * (x1(i, k) - x2(j, k)) / (2 * l[k] * l[k]));
+        }
+      }
+      
+      Sigma(i, j) = sum;
     }
   }
   

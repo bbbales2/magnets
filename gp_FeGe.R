@@ -8,11 +8,11 @@ library(RcppEigen)
 sourceCpp("covariance.cpp")
 
 (csv = read_csv('FeGe_ders.csv') %>%
-    rename(y = der))
+    rename(y = M))
 
-ltemp = 0.5
+ltemp = 1.0
 lfield = 0.015
-sigmaf = 1.0
+sigmaf = 3.0
 sigma = 0.01
 
 (df = csv %>%
@@ -33,28 +33,45 @@ fieldp = seq(min(field), max(field), length = 200)
 xinterp = expand.grid(tempp, fieldp) %>% as.matrix
 
 Ks = sigmaf^2 * rbf_cov_vec(xinterp, xdata, c(ltemp, lfield))
+Kds = sigmaf^2 * rbf_cov_d_vec(xinterp, xdata, c(ltemp, lfield), 0)
 
 Sigmainvy = fsolve(Sigma, df %>% pull(y))
 #solve(Sigma, df %>% pull(y))
 
-xinterp %>% as.tibble %>%
+M = xinterp %>% as.tibble %>%
   rename(temp = Var1, field = Var2) %>%
-  mutate(y = Ks %*% Sigmainvy) %>%
+  mutate(y = Ks %*% Sigmainvy)
+
+M %>%
   ggplot(aes(field, y)) +
   geom_point(aes(colour = temp), size = 0.1) +
   geom_point(data = df, size = 0.1, colour = "red")
 
-xinterp %>% as.tibble %>%
-  rename(temp = Var1, field = Var2) %>%
-  mutate(y = Ks %*% Sigmainvy) %>%
+M %>%
   ggplot(aes(temp, y)) +
   geom_point(aes(colour = field), size = 0.1) +
   geom_point(data = df, size = 0.1, colour = "red")
 
-xinterp %>% as.tibble %>%
-  rename(temp = Var1, field = Var2) %>%
-  mutate(y = Ks %*% Sigmainvy) %>%
+M %>%
   ggplot(aes(temp, field)) +
   geom_tile(aes(fill = y), size = 0.1) +
   geom_point(data = df, size = 0.1, colour = "red") +
   scale_fill_gradient2(low = "#0000FF", high = "#FF0000", mid = "white", midpoint = 0.0, limits = c(-.2, .2))
+
+dMdt = xinterp %>% as.tibble %>%
+  rename(temp = Var1, field = Var2) %>%
+  mutate(y = Kds %*% Sigmainvy)
+
+dMdt %>%
+  ggplot(aes(field, y)) +
+  geom_point(aes(colour = temp), size = 0.1)
+
+dMdt %>%
+  ggplot(aes(temp, y)) +
+  geom_point(aes(colour = field), size = 0.1)
+
+dMdt %>%
+  ggplot(aes(temp, field)) +
+  geom_tile(aes(fill = y)) +
+  scale_fill_gradient2(low = "#0000FF", high = "#FF0000", mid = "white", midpoint = 0.0, limits = c(-.2, .2))
+
