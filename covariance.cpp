@@ -130,3 +130,21 @@ NumericVector fsolve(NumericMatrix X, NumericVector y) {
   Eigen::VectorXd out = X_.llt().solve(y_);
   return wrap(out);
 }
+
+// [[Rcpp::export]]
+List feigen(NumericMatrix X) {
+  typedef Eigen::Map<Eigen::MatrixXd> MapMatd;
+  const MapMatd X_(as<MapMatd>(X));
+  Eigen::MatrixXd X__ = X_;
+  //Eigen::VectorXd out = X_.llt().solve(y_);
+  Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es;
+  
+  es.compute(X__);
+  
+  List out;
+  
+  out["e"] = wrap(es.eigenvalues());
+  out["v"] = wrap(es.eigenvalues());
+    
+  return wrap(out);
+}
