@@ -123,34 +123,37 @@ NumericMatrix rbf_cov_w_vec(NumericMatrix x1, NumericMatrix x2,
   
   for(int i = 0; i < x1.nrow(); i++) {
     for(int j = 0; j < x2.nrow(); j++) {
-      double result = 1.0;
+      double result = 0.0;
       
       for(int k = 0; k < l.size(); k++) {
         double rbf = std::exp(-(x1(i, k) - x2(j, k)) * (x1(i, k) - x2(j, k)) / (2 * l[k] * l[k]));
         if(which1[k] == -1 && which2[k] == -1) {
-          result *= (l + x1(i, k) - x2(j, k)) * (l - x1(i, k) + x2(j, k)) * rbf / (l[k] * l[k] * l[k] * l[k]);
+          result = (l[k] + x1(i, k) - x2(j, k)) * (l[k] - x1(i, k) + x2(j, k)) * rbf / (l[k] * l[k] * l[k] * l[k]);
         } else if(which1[k] == -1 && which2[k] == 0) {
-          result *= (x2(i, k) - x1(j, k)) * rbf / (l[k] * l[k]);
+          result = (x2(j, k) - x1(i, k)) * rbf / (l[k] * l[k]);
         } else if(which1[k] == -1 && which2[k] == 1) {
           throw std::invalid_argument("which1 == derivative, which2 == integral not implemented");
         } else if(which1[k] == 0 && which2[k] == -1) {
-          result *= (x1(i, k) - x2(j, k)) * rbf / (l[k] * l[k]);
+          result = (x1(i, k) - x2(j, k)) * rbf / (l[k] * l[k]);
         } else if(which1[k] == 0 && which2[k] == 0) {
-          result *= rbf;
+          result = rbf;
         } else if(which1[k] == 0 && which2[k] == 1) {
-          result *= l[k] * sqrt(M_PI / 2.0) * (erf((x1(j, k)) / (sqrt(2.0) * l[k])) + erf((x2(i, k) - x1(j, k)) / (sqrt(2.0) * l[k])));
+          result = l[k] * sqrt(M_PI / 2.0) * (erf((x1(i, k)) / (sqrt(2.0) * l[k])) + erf((x2(j, k) - x1(i, k)) / (sqrt(2.0) * l[k])));
         } else if(which1[k] == 1 && which2[k] == -1) {
           throw std::invalid_argument("which1 == integral, which2 == derivative not implemented");
         } else if(which1[k] == 1 && which2[k] == 0) {
-          result *= l[k] * sqrt(M_PI / 2.0) * (erf((x2(j, k)) / (sqrt(2.0) * l[k])) + erf((x1(i, k) - x2(j, k)) / (sqrt(2.0) * l[k])));
+          result = l[k] * sqrt(M_PI / 2.0) * (erf((x2(j, k)) / (sqrt(2.0) * l[k])) + erf((x1(i, k) - x2(j, k)) / (sqrt(2.0) * l[k])));
         } else if(which1[k] == 1 && which2[k] == 1) {
-          result *= l[k] * sqrt(M_PI / 2.0) * (
+          result = l[k] * sqrt(M_PI / 2.0) * (
             l[k] * sqrt(M_PI / 2.0) * (
-                -1 + std::exp(-x1^2 / (2 * l^2)) - std::exp(-(x1 - x2)^2 / (2 * l^2)) + std::exp(-x2^2 / (2 * l^2))
+                -1 +
+                  std::exp(-x1(i, k) * x1(i, k) / (2 * l[k] * l[k])) -
+                  std::exp(-(x1(i, k) - x2(j, k)) * (x1(i, k) - x2(j, k)) / (2 * l[k] * l[k])) +
+                  std::exp(-x2(j, k) * x2(j, k) / (2 * l[k] * l[k]))
             ) + 
-            x1 * erf(x1 / (sqrt(2.0) * l[k])) +
-            x2 * erf(x2 / (sqrt(2.0) * l[k])) +
-            (x1 - x2) * erf((x2 - x1) / (sqrt(2.0) * l[k]))
+            x1(i, k) * erf(x1(i, k) / (sqrt(2.0) * l[k])) +
+            x2(j, k) * erf(x2(j, k) / (sqrt(2.0) * l[k])) +
+            (x1(i, k) - x2(j, k)) * erf((x2(j, k) - x1(i, k)) / (sqrt(2.0) * l[k]))
           );
         }
       }
