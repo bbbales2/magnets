@@ -35,7 +35,8 @@ NumericMatrix rbf_cov(NumericVector x1, NumericVector x2, double l) {
 }
 
 // [[Rcpp::export]]
-NumericMatrix rbf_cov_vec(NumericMatrix x1, NumericMatrix x2, NumericVector l) {
+NumericMatrix rbf_cov_vec(NumericMatrix x1, NumericMatrix x2,
+                          NumericVector l, double diag = 0.0) {
   NumericMatrix Sigma(x1.nrow(), x2.nrow());
   
   if(x1.ncol() != x2.ncol() || x2.ncol() != l.size())
@@ -55,7 +56,7 @@ NumericMatrix rbf_cov_vec(NumericMatrix x1, NumericMatrix x2, NumericVector l) {
   
   if(x1.nrow() == x2.nrow()) {
     for(int i = 0; i < x1.nrow(); i++) {
-      Sigma(i, i) += 1e-10;
+      Sigma(i, i) += diag;
     }
   }
   
