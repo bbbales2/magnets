@@ -182,16 +182,6 @@ NumericMatrix fsolve(NumericMatrix X, NumericMatrix y) {
   return wrap(out);
 }
 
-//// [[Rcpp::export]]
-/*NumericVector fvsolve(NumericMatrix X, NumericVector y) {
-typedef Eigen::Map<Eigen::MatrixXd> MapMatd;
-typedef Eigen::Map<Eigen::VectorXd> MapVecd;
-const MapMatd X_(as<MapMatd>(X));
-const MapVecd y_(as<MapVecd>(y));
-Eigen::VectorXd out = X_.llt().solve(y_);
-return wrap(out);
-}*/
-
 // [[Rcpp::export]]
 List feigen(NumericMatrix X) {
   typedef Eigen::Map<Eigen::MatrixXd> MapMatd;

@@ -8,14 +8,6 @@ library(RcppEigen)
 
 sourceCpp("covariance.cpp")
 
-eigenbench = function(i) {
-  x = seq(0.0, 1.0, length = i)
-  X = rbf_cov(x, x, 1.0)
-  out = feigen(X)
-}
-
-system.time(eigenbench(1000))
-
 (csv = read_csv('cooling_only_Gd_DSm.csv') %>% #'cooling_only_Gd_DSm.csv'
   rename(temp = `Temperature (K)`, field = `Magnetic Field (Oe)`, y = normalized_moment_cgs) %>%
     mutate(field = field / 10000.0,
@@ -56,7 +48,7 @@ sigma = 5.0
 (df = csv %>%
     mutate(field = round(field, 4)) %>%
     mutate(field = log(field)) %>%
-    group_by(field) %>% sample_frac(0.25) %>%
+    group_by(field) %>% sample_frac(0.05) %>%
     ungroup())
 
 df %>% ggplot(aes(temp, y)) +
