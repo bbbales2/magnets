@@ -15,17 +15,17 @@ sourceCpp("covariance_minimal.cpp")
            y = y) %>%
     filter(temp > min(temp) & temp < max(temp)))
 
-ltemp = 10.0
-lfield = 1.0
-sigmaf = 10.0
-sigma = 0.01
-
 # Round the field numbers so that we can group them later
-(df = csv %>%
+df = csv %>%
     mutate(field = round(field, 4)) %>%
     mutate(field = log(field)) %>%
     group_by(field) %>% sample_frac(0.2) %>%
-    ungroup())
+    ungroup()
+
+ltemp = 10.0 # Length scale in temp direction
+lfield = 1.0 # Length scale in field direction
+sigmaf = 10.0 # Scale of y (how far the function deviates from zero) -- maybe use sd(df %>% pull(y))?
+sigma = 0.01 # Observational noise, I assume you have an idea of this?
 
 # Coordinates of measurements
 xdata = df %>% select(temp, field) %>% as.matrix
