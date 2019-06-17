@@ -17,8 +17,8 @@ sourceCpp("covariance_minimal.cpp")
 
 ltemp = 10.0
 lfield = 1.0
-sigmaf = 5.0
-sigma = 0.1
+sigmaf = 10.0
+sigma = 0.01
 
 # Round the field numbers so that we can group them later
 (df = csv %>%
@@ -44,18 +44,22 @@ fieldp = log(seq(exp(min(field)), exp(max(field)), length = 200))
 xinterp = expand.grid(tempp, fieldp) %>% as.matrix
 
 # Covariance matrix between interpolation and observation points
-Ks = sigmaf^2 * rbf_cov_deriv_vec(xinterp, xdata, c(ltemp, lfield))
+Ks = sigmaf^2 * rbf_cov_vec(xinterp, xdata, c(ltemp, lfield))
 
 # Covariance matrix between derivatives at interpolation points and observations
 Kds = sigmaf^2 * rbf_cov_deriv_vec(xinterp, xdata, c(ltemp, lfield))
 
-# http://www.gaussianprocess.org/gpml/chapters/RW2.pdf, eq. 2.19
-# This is K(X, X)^{-1} f
-Sigmainvy = fsolve(Sigma, df %>% pull(y) %>% as.matrix)
+y_mean = df %>%
+  pull(y) %>%
+  mean
 
-# Compute K(X_{*}, X) K(X, X)^{-1} f, where K is the covariance between
+# http://www.gaussianprocess.org/gpml/chapters/RW2.pdf, eq. 2.19
+# This is K(X, X)^{-1} (f - mean(f))
+Sigmainvy = fsolve(Sigma, (df %>% pull(y) - y_mean) %>% as.matrix)
+
+# Compute mean(f) + K(X_{*}, X) K(X, X)^{-1} f, where K is the covariance between
 # M at observation and interpolation points
-M_mean = Ks %*% Sigmainvy
+M_mean = y_mean + Ks %*% Sigmainvy
 
 M = xinterp %>% as_tibble() %>%
   rename(temp = Var1, field = Var2) %>%
@@ -80,7 +84,8 @@ M %>%
 # M at observation points and dMdtemp at interpolation points
 dMdt_mean = Kds %*% Sigmainvy
 
-dMdt = xinterp %>% as.tibble %>%
+dMdt = xinterp %>%
+  as_tibble() %>%
   rename(temp = Var1, field = Var2) %>%
   mutate(y = dMdt_mean)
 
@@ -114,3 +119,4 @@ mu_df %>%
     ggplot(aes(temp, exp(field))) +
     geom_tile(aes(fill = mu)) +
     scale_fill_gradientn(colours = rainbow(10))
+
