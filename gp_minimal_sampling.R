@@ -101,14 +101,21 @@ dMdt %>%
   ggplot(aes(temp, exp(field))) +
   geom_tile(aes(fill = y))
 
+# http://www.gaussianprocess.org/gpml/chapters/RW2.pdf, eq. 2.19
+# This is K(X_{*}, X_{*})
 Kdsds = sigmaf^2 * rbf_cov_deriv_deriv_vec(xinterp, xinterp, c(ltemp, lfield), 1e-10)
 dMdt_mean = Kds %*% Sigmainvy
+# This is K(X_{*}, X_{*}) - K(X_{*}, X) K(X, X)^{-1} K(X, X_{*})
 dMdt_var = Kdsds - Kds %*% fsolve(Sigma, t(Kds))
 
+# This is used to generate random multivariate normal draws
+# Check out: https://en.wikipedia.org/wiki/Multivariate_normal_distribution#Drawing_values_from_the_distribution
+# It's faster to do it this way (otherwise we gotta do decompositions or whatnot at every draw)
 LdMdt = chol(dMdt_var) %>% t
 
 Ss = list()
 for(r in 1:100) {
+  # Generate multivariate normal
   x = (dMdt_mean + LdMdt %*% rnorm(length(dMdt_mean))) %>%
     matrix(nrow = length(tempp))
 
@@ -130,6 +137,7 @@ samples_df = bind_rows(Ss) %>%
             ql = quantile(S, 0.25),
             qh = quantile(S, 0.75))
 
+# Plot 50% posterior quantiles of a few different field levels
 samples_df %>%
   filter(field %in% fieldp[c(10, 20, 30)]) %>%
   ggplot(aes(temp, mu)) +
